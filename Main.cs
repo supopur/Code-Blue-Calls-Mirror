@@ -28,14 +28,14 @@ namespace Code_Blue_Calls
         {
             if (OnDuty)
             {
-                RegisterCallouts();
+                RegisterCallouts(); 
                 Game.DisplayNotification("Code Blue Callouts loaded.");
             }
         }
 
         private static void RegisterCallouts()
         {
-            Functions.RegisterCallout(typeof(Callouts.Test));
+            Functions.RegisterCallout(typeof(Callouts.DomesticViolence));
         }
 
         public static Assembly LSPDFRResolveEventHandler(object sender, ResolveEventArgs args)
