@@ -34,14 +34,13 @@ namespace Code_Blue_Calls
         {
             if (OnDuty)
             {
-<<<<<<< HEAD
                 // If the player goes on duty, register the callouts
                 RegisterCallouts();
 
                 // Display a notification to indicate that the callouts have been loaded
-=======
+
                 RegisterCallouts();
->>>>>>> parent of ccc531b (Added domestic violence calout)
+
                 Game.DisplayNotification("Code Blue Callouts loaded.");
             }
         }
@@ -49,7 +48,7 @@ namespace Code_Blue_Calls
         // Register the callouts
         private static void RegisterCallouts()
         {
-            Functions.RegisterCallout(typeof(Callouts.Test));
+            Functions.RegisterCallout(typeof(Callouts.DomesticViolence));
         }
 
         // Event handler for resolving LSPDFR-related assemblies

@@ -56,6 +56,12 @@
     <Reference Include="CalloutInterfaceAPI">
       <HintPath>..\..\..\Documents\References\CalloutInterfaceAPI.dll</HintPath>
     </Reference>
+    <Reference Include="DialogueSystem">
+      <HintPath>..\..\..\Documents\References\DialogueSystem.dll</HintPath>
+    </Reference>
+    <Reference Include="IPT.Common">
+      <HintPath>..\..\..\..\..\Program Files\Epic Games\GTAV\IPT.Common.dll</HintPath>
+    </Reference>
     <Reference Include="LSPD First Response">
       <HintPath>..\..\..\Documents\References\LSPD First Response.dll</HintPath>
     </Reference>
@@ -82,7 +88,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Callouts\Test.cs" />
+    <Compile Include="Callouts\DomesticViolence.cs" />
     <Compile Include="IniFile.cs" />
     <Compile Include="Main.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
