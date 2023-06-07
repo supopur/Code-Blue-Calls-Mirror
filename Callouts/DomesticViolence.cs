@@ -116,8 +116,91 @@ namespace Code_Blue_Calls.Callouts
                 new House
                 {
                     Name = "Med rich apt.",
-
-                    
+                    Victims = new List<Vector3>
+                    {
+                        new Vector3(344.8771f, -998.5061f, -99.1962f)
+                    },
+                    Suspects = new List<Vector3>
+                    {
+                        new Vector3(339.5396f, -997.5002f, -99.1962f)
+                    },
+                    Position = new Vector3(-1356.278f, -1129.217f, 3.779083f)
+                },
+                new House
+                {
+                    Name = "West eclipse towers",
+                    Victims = new List<Vector3>
+                    {
+                        new Vector3(-782.3491f, 329.5226f, 217.0381f),
+                        new Vector3(-785.1342f, 342.9378f, 216.8519f),
+                        new Vector3(-796.3958f, 338.1474f, 220.4384f),
+                        new Vector3(-795.549f, 323.2416f, 217.0381f),
+                        new Vector3(-777.6931f, 316.4848f, 85.66267f)
+                    },
+                    Suspects = new List<Vector3>
+                    {
+                        new Vector3(-787.7764f, 330.2213f, 217.0383f),
+                        new Vector3(-785.4869f, 337.4933f, 216.8385f),
+                        new Vector3(-800.6288f, 332.9929f, 220.4384f),
+                        new Vector3(-797.6311f, 326.5521f, 217.0381f),
+                        new Vector3(-769.764f, 316.3391f, 85.66267f)
+                    },
+                    Position = new Vector3(-775.9423f, 291.741f, 85.38015f)
+                },
+                new House
+                {
+                    Name = "Janitors house",
+                    Victims = new List<Vector3>
+                    {
+                        new Vector3(-111.19f, -11f, 70.52f)
+                    },
+                    Suspects = new List<Vector3>
+                    {
+                        new Vector3(-111.19f, -8.28f, 70.52f)
+                    },
+                    Position = new Vector3(-131.3567f, -32.02588f, 57.84212f)
+                },
+                new House
+                {
+                    Name = "4 Integrity way apt",
+                    Victims = new List<Vector3>
+                    {
+                        new Vector3(-8.287368f, -588.9766f, 98.83028f),
+                        new Vector3(-20.05867f, -590.1524f, 98.83028f),
+                        new Vector3(-7.449115f, -591.1342f, 94.02557f),
+                        new Vector3(-22.00957f, -593.6589f, 94.10957f),
+                        new Vector3(-22.16828f, -601.7687f, 100.2328f)
+                    },
+                    Suspects = new List<Vector3>
+                    {
+                        new Vector3(-8.015527f, -585.1836f, 98.85117f),
+                        new Vector3(-16.91024f, -590.4242f, 98.83028f),
+                        new Vector3(-13.52914f, -589.8003f, 94.02557f),
+                        new Vector3(-18.81809f, -595.7461f, 94.03452f),
+                        new Vector3(-24.06141f, -599.5947f, 100.2388f)
+                    },
+                    Position = new Vector3(-66.24619f, -574.7697f, 36.95814f)
+                },
+                new House
+                {
+                    Name = "StrangeWays",
+                    Victims = new List<Vector3>
+                    {
+                        new Vector3(-608.4471f, 46.57162f, 97.40007f),
+                        new Vector3(-617.1703f, 51.9048f, 97.59996f),
+                        new Vector3(-623.8194f, 52.13329f, 97.59952f),
+                        new Vector3(-616.989f, 60.88132f, 98.2f),
+                        new Vector3(-594.8115f, 50.29039f, 96.99963f)
+                    },
+                    Suspects = new List<Vector3>
+                    {
+                        new Vector3(-609.6661f, 47.69266f, 97.40007f),
+                        new Vector3(-611.9868f, 51.139f, 97.63506f),
+                        new Vector3(-622.6797f, 55.9524f, 97.5995f),
+                        new Vector3(-615.5163f, 57.98928f, 98.19996f),
+                        new Vector3(-597.5438f, 49.36379f, 97.03481f)
+                    },
+                    Position = new Vector3(-615.7661f, 24.44156f, 41.59992f)
                 }
             };
 
