@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Text;
 using Rage;
 using LSPD_First_Response.Mod.API;
 using LSPD_First_Response.Mod.Callouts;
@@ -8,6 +10,12 @@ using System.Collections.Generic;
 using DialogueSystem;
 using CalloutInterface;
 using LSPD_First_Response.Engine;
+using System.Drawing.Text;
+using System.Runtime.ExceptionServices;
+using System.Diagnostics;
+using System.Net.NetworkInformation;
+using System.Drawing;
+using System.Threading;
 
 namespace Code_Blue_Calls.Callouts
 {
@@ -15,19 +23,25 @@ namespace Code_Blue_Calls.Callouts
     [CalloutInterface("Domestic Violence", CalloutProbability.Medium, "Code 3", "LSPD")]
     public class DomesticViolence : Callout
     {
+        private House theHouse;
         private Ped victim, suspect;
-        private Blip blip_suspect, blip_victim;
-        private Vector3 location_suspect, location_victim;
+        //private Blip blip_suspect, blip_victim;
+        private List<House> Houses;
+        private Random rand = new Random();
+        private Vector3 loc_victim, loc_suspect;
+        IniFile ini = new IniFile("test.ini");
+        int index;
+        
 
-        private Vector3 GetClosestHouse(List<Vector3> houses)
+        private House GetClosestHouse(List<House> houses)
         {
             Vector3 playerPosition = Game.LocalPlayer.Character.Position;
-            Vector3 closestHouse = Vector3.Zero;
+            House closestHouse = null;
             float closestDistance = float.MaxValue;
-
-            foreach (Vector3 house in houses)
+                
+            foreach (House house in houses)
             {
-                float distance = Vector3.Distance(playerPosition, house);
+                float distance = Vector3.Distance(playerPosition, house.Position);
                 if (distance < closestDistance)
                 {
                     closestHouse = house;
@@ -46,33 +60,97 @@ namespace Code_Blue_Calls.Callouts
             public string Name;
         }
 
-        public override bool OnBeforeCalloutDisplayed()
+        private static int PercentageMagicFuckery(int[] dict)
         {
-            // This is stupid and will get replaced with a list containing a list with the suspect and the victim and its gonna be per house
-            List<Vector3> location_suspect = new List<Vector3> { 
-                new Vector3()
-            };
+            int totalChances = dict.Sum();
+            Random random = new Random(); // Create a single instance of Random
+            int randomNumber = random.Next(1, totalChances + 1);
+            int cumulativeSum = 0;
+            int selectedIdx = -1;
 
-            
-
-            //This is a list of all the houses/interiors
-            //This is used for getting the closest house to the player so its not random and he/she doesn't have to go to the other side of the map
-            
-            List<Vector3> houses = new List<Vector3> 
+            for (int i = 0; i < dict.Length; i++)
             {
-                new Vector3(1276.979f, -1725.641f, 54.65f), //Lester's place
-                new Vector3(249.1075f, -1720.578f, 29.16469f), //Generic house
-                new Vector3(-775.9423f, 291.741f, 85.38015f), //West eclips towers
-                new Vector3(-131.3567f, -32.02588f, 57.84212f), //Janitors house
-                new Vector3(-66.24619f, -574.7697f, 36.95814f), //4 integrity way (players apt.)
-                new Vector3(-13.93472f, -1455.081f, 30.4537f), //Franklin
-                new Vector3(-616.9177f, 22.83247f, 41.47743f), //Strangeways
-                new Vector3(-178.65f, 507.2562f, 136.0046f), //Wild oats
-                new Vector3(-553.8226f, 666.5585f, 144.6216f), //Normandy
-                new Vector3(1122.733f, 2647.359f, 37.99636f), //Vespuci aka sandy motel
-            };
+                cumulativeSum += dict[i];
+                if (randomNumber <= cumulativeSum)
+                {
+                    selectedIdx = i;
+                    break;
+                }
+            }
+            return selectedIdx;
+        }
 
-            List<House> houses1 = new List<House>
+        private void CheckAllPedsAndCreateIfMissing()
+        {
+            if (!victim)
+            {
+                // Spawn the victim ped
+                victim = new Ped(loc_victim);
+
+                // Make the victim persistent to prevent despawning
+                victim.IsPersistent = true;
+
+                // Set BlockPermanentEvents to true (behavior may be affected)
+                victim.BlockPermanentEvents = true;
+
+                // Make the victim stand still indefinitely
+                victim.Tasks.StandStill(-1);
+            }
+            if (!suspect)
+            {
+                // Spawn the suspect ped
+                suspect = new Ped(loc_suspect);
+
+                // Make the suspect persistent to prevent despawning
+                suspect.IsPersistent = true;
+
+                // Set BlockPermanentEvents to true (behavior may be affected)
+                suspect.BlockPermanentEvents = true;
+
+                // Make the suspect stand still indefinitely
+                suspect.Tasks.StandStill(-1);
+            }
+        }
+
+        private void killViIfClose()
+        {
+            // If the player can't hear the gunshot properly just kill the victim
+            if (Game.LocalPlayer.Character.DistanceTo(loc_victim) > 500) { suspect.Tasks.Clear(); victim.Kill(); return; }
+
+            // If the player can hear the gunshot make the suspect kill the victim
+            suspect.Tasks.FightAgainst(victim);
+        }
+
+        private void hateCops()
+        {
+            suspect.RelationshipGroup.SetRelationshipWith(RelationshipGroup.Cop, Relationship.Hate);
+            suspect.RelationshipGroup.SetRelationshipWith(Game.LocalPlayer.Character.RelationshipGroup, Relationship.Hate);
+        }
+
+
+        void suicide()
+        {
+            int rInt = rand.Next(0, 1);
+            if (rInt == 0)
+            {
+                suspect.Tasks.PlayAnimation(new AnimationDictionary("mp_suicide"), "pill", 5f, AnimationFlags.None); //Animations are scary to me
+                                                                                                                     // It will take 30-60s for the pill to take effect
+                Thread.Sleep(rand.Next(30000, 60000));
+                suspect.Kill();
+            }
+            else
+            {
+                if (!suspect.Inventory.HasLoadedWeapon) { suspect.Inventory.GiveNewWeapon("weapon_dbshotgun", 2, true); }
+
+                suspect.Tasks.PlayAnimation(new AnimationDictionary("mp_suicide"), "pistol", 5f, AnimationFlags.None); //Animations are scary to me
+                suspect.Kill();
+            }
+        }
+
+        public override bool OnBeforeCalloutDisplayed()
+        { 
+            // OMG I just realised i can do this all in a xml. Well too late now
+            Houses = new List<House>
             {
                 new House
                 {
@@ -201,116 +279,254 @@ namespace Code_Blue_Calls.Callouts
                         new Vector3(-597.5438f, 49.36379f, 97.03481f)
                     },
                     Position = new Vector3(-615.7661f, 24.44156f, 41.59992f)
+                },
+                new House
+                {
+                    Name = "Wild oats",
+                    Victims = new List<Vector3>
+                    {
+                        new Vector3(-167.024f, 482.7889f, 137.2653f),
+                        new Vector3(-168.7479f, 489.9296f, 137.4435f),
+                        new Vector3(-169.5214f, 494.82f, 137.6535f),
+                        new Vector3(-174.3784f, 492.1631f, 133.8438f),
+                        new Vector3(-165.0503f, 484.7615f, 133.8696f),
+                        new Vector3(-171.1398f, 497.537f, 130.0437f),
+                        new Vector3(-171.7018f, 491.266f, 130.0436f),
+                        new Vector3(-168.6209f, 489.5579f, 133.8721f)
+                    },
+                    Suspects = new List<Vector3>
+                    {
+                        new Vector3(-169.5247f, 480.2822f, 137.2442f),
+                        new Vector3(-168.0818f, 487.8052f, 137.4435f),
+                        new Vector3(-170.4885f, 493.2755f, 137.6535f),
+                        new Vector3(-174.7031f, 497.1105f, 133.8438f),
+                        new Vector3(-163.6721f, 485.0209f, 133.8696f),
+                        new Vector3(-174.7959f, 498.5963f, 130.0383f),
+                        new Vector3(-175.4943f, 492.6709f, 130.0436f),
+                        new Vector3(-166.7517f, 492.885f, 133.8437f)
+                    },
+                    Position = new Vector3(-183.7358f, 510.1255f, 135.2205f)
+                },
+                new House
+                {
+                    Name = "Normandy drv",
+                    Victims = new List<Vector3>
+                    {
+                        new Vector3(-565.8858f, 656.9946f, 145.8321f),
+                        new Vector3(-572.941f, 653.3565f, 145.632f),
+                        new Vector3(-570.8762f, 644.0323f, 145.4596f),
+                        new Vector3(-572.1926f, 658.8855f, 142.0321f),
+                        new Vector3(-573.1517f, 643.7465f, 142.0321f),
+                        new Vector3(-571.5641f, 651.9454f, 142.0601f),
+                        new Vector3(-571.7731f, 667.8361f, 138.2321f)
+                    },
+                    Suspects = new List<Vector3>
+                    {
+                        new Vector3(-569.3209f, 656.2357f, 145.8321f),
+                        new Vector3(-573.0806f, 652.2025f, 145.632f),
+                        new Vector3(-573.103f, 644.9861f, 145.4596f),
+                        new Vector3(-571.3017f, 661.8961f, 142.0321f),
+                        new Vector3(-573.0618f, 647.8514f, 142.0321f),
+                        new Vector3(-567.8376f, 650.1216f, 142.0323f),
+                        new Vector3(-571.7289f, 671.4425f, 138.2321f)
+                    },
+                    Position = new Vector3(-553.8226f, 666.5585f, 144.6216f)
+                },
+                new House
+                {
+                    Name = "Sandy motel",
+                    Victims = new List<Vector3>
+                    {
+                        new Vector3(151.9337f, -1004.217f, -98.99999f)
+                    },
+                    Suspects = new List<Vector3>
+                    {
+                        new Vector3(153.0823f, -1006.528f, -98.99999f)
+                    },
+                    Position = new Vector3(1122.733f, 2647.359f, 37.99636f)
                 }
             };
 
             // Choose the closest house to the player. This isn't really optimal as if the player isn't patrolling and doing radar or some other thing wich involves being in one place
             // Then the player will get the same house again and again
-            Vector3 SpawnPoint = GetClosestHouse(houses);
+            theHouse = GetClosestHouse(Houses);
 
+            Vector3 SpawnPoint = theHouse.Position;
 
-            
-
-            
-
-            // Not needed as My code isn't goofy and doesn't set the callout position to the other side of the map
-            //AddMaximumDistanceCheck(600f, SpawnPoint); //Player must be 600m or closer 
-
+            AddMaximumDistanceCheck(700f, SpawnPoint);
 
             ShowCalloutAreaBlipBeforeAccepting(SpawnPoint, 30f);
             CalloutMessage = "Domestic Violence";
             CalloutPosition = SpawnPoint;
             LSPD_First_Response.Mod.API.Functions.PlayScannerAudioUsingPosition("WE_HAVE CRIME_RESISTING_ARREST_02 IN_OR_ON_POSITION", SpawnPoint);
 
-
-            
-
-
             return base.OnBeforeCalloutDisplayed();
+        }
+
+        void killVictim()
+        {
+            if (!suspect.Inventory.HasLoadedWeapon)
+            {
+                suspect.Inventory.GiveNewWeapon("weapon_snspistol", 15, true);
+                suspect.Tasks.Clear();
+                suspect.Tasks.FightAgainst(victim);
+            }
+            else
+            {
+                suspect.Tasks.Clear();
+                suspect.Tasks.FightAgainst(victim);
+            }
         }
 
         public override bool OnCalloutAccepted()
         {
-            new RelationshipGroup("Attacker");
-            new RelationshipGroup("Victims");
+            //In this stage we want to choose the positions of the suspsect and the victim, Also in this stage we might guns to the peds inventories 
 
-            suspect = new Ped(location_suspect);
-            suspect.IsPersistent = true;
-            suspect.BlockPermanentEvents = true;
-            suspect.RelationshipGroup = "Attacker";
-            suspect.Inventory.GiveNewWeapon("WEAPON_NAVYREVOLVER", 1, true);
+            int PositionNumber;
+            int MaxNumber;
+
+            bool realistic = bool.Parse(ini.IniReadValue("Callouts", "RealisticChances"));
+
+            //Get the max number of positions
+            MaxNumber = theHouse.Suspects.Count;
+            //Get zie number in range
+            PositionNumber = rand.Next(0, MaxNumber);
+
+            //Get the spawn points of the suspect and victim
+            loc_suspect = theHouse.Suspects[PositionNumber];
+            loc_victim = theHouse.Victims[PositionNumber];
+
+            // Create the suspect and the victim
+            CheckAllPedsAndCreateIfMissing();
+            
+            int[] chances_unrealistic = { 20, 10, 5, 15, 5, 20, 20, 5 };
+            int[] chances_realistic = { 5, 17, 7, 5, 15, 25, 10, 6, 10 };
+
+            // You must be level 100+ to read this.
+            // Basically its a if statement inside ()
+            index = PercentageMagicFuckery(realistic ? chances_realistic : chances_unrealistic);
+
+            
 
 
 
-            victim = new Ped(location_victim);
-            victim.IsPersistent = true;
-            victim.BlockPermanentEvents = true;
-            victim.RelationshipGroup = "Victims";
+                // Prepare stuff
+                switch (index)
+            {
+                // Aggressor (AG) kills Victim (VI)
+                case 0:
+                    killViIfClose();
+                    break;
+                // AG kills VI and Player (PL)
+                case 1:
+                    killViIfClose();
 
-            //Game.LocalPlayer.Character.RelationshipGroup = "Victims";
+                    hateCops();
 
-            suspect.Tasks.StandStill(-1);
+                    break;
+                // AG takes VI hostage
+                case 2:
+                    suspect.Tasks.Clear();
+                    suspect.Tasks.AimWeaponAt(victim, -1);
+                    break;
+                // AG kills PL
+                case 3:
+                    hateCops();
+                    break;
+                //AG kills VI and commits suicide
+                case 4:
+                    killViIfClose();
+                    if (Game.LocalPlayer.Character.DistanceTo(suspect) > 150) { suspect.Kill(); }
+                    break;
+                //AG flees
+                case 5:
+                    break;
+                //AG is just drunk and noncompliant and eventually flees on foot
+                case 6:
+                    // Make the suspect drunk
+                    suspect.Tasks.PlayAnimation(new AnimationDictionary("move_m@drunk@verydrunk"), "walk", 5f, AnimationFlags.Loop); //Animations are scary to me
+                    break;
+                //AG Doesnt care about the victim and sets up booby traps
+                case 7:
+                    break;
+                //It was a missunderstanding
+                case 8:
+                    break;
+                //Not a crime
+                case 9:
+                    break;
+                //AG Said he will stop
+                case 10:
+                    break;
+            }
 
-            Game.SetRelationshipBetweenRelationshipGroups("Attacker", "Victim", Relationship.Hate);
 
-            blip_suspect = suspect.AttachBlip();
-            blip_suspect.Color = System.Drawing.Color.Red;
-            blip_suspect.IsRouteEnabled = true;
 
-            blip_victim = victim.AttachBlip();
-            blip_victim.Color = System.Drawing.Color.Green;
-            blip_victim.IsRouteEnabled = false;
 
             return base.OnCalloutAccepted();
+            
         }
+
+        //All the process related crap
 
         public override void Process()
         {
             base.Process();
 
-            if (Game.LocalPlayer.Character.DistanceTo(suspect) < 40f && !ShotAtVictim && !SuspectKillingPlayer && !victim.IsDead)
+            int chance = rand.Next(0, 100);
+            bool realistic = bool.Parse(ini.IniReadValue("Callouts", "RealisticChances"));
+
+            
+
+            switch (index)
             {
-                suspect.Tasks.FightAgainst(victim);
-                ShotAtVictim = true;
+                // Aggressor (AG) kills Victim (VI)
+                case 0:
+                    break;
+                // AG kills VI and Player (PL)
+                case 1:
+                    break;
+                // AG takes VI hostage
+                case 2:
+                    break;
+                // AG kills PL
+                case 3:
+                    break;
+                //AG kills VI and commits suicide
+                case 4:
+                    break;
+                //AG flees
+                case 5:
+                    break;
+                //AG is just drunk and noncompliant and eventually flees on foot
+                case 6:
+                    break;
+                //AG Doesnt care about the victim and sets up booby traps
+                case 7:
+                    break;
+                //It was a missunderstanding
+                case 8:
+                    break;
+                //Not a crime
+                case 9:
+                    break;
+                //AG Said he will stop
+                case 10:
+                    break;
             }
 
-            if (Game.LocalPlayer.Character.DistanceTo(suspect) < 15f && !SuspectKillingPlayer)
-            {
-                //Give the suspect a weapon and make him attack the player
-                suspect.Tasks.Clear();
-                suspect.Inventory.EquippedWeapon.Ammo = 6;
-                SuspectKillingPlayer = true;
-                suspect.Tasks.FightAgainst(Game.LocalPlayer.Character);
 
-            }
 
-            if (suspect.IsDead || suspect.IsCuffed)
-            {
-                End();
-            }
 
-            if (suspect.Exists() && victim == null)
-            {
-                victim = new Ped(location_victim);
-                victim.Tasks.FightAgainst(suspect);
-                Game.DisplaySubtitle("Investigate the domestic violence report and neutralize the threat.", 5000);
-            }
 
-            if (victim != null && victim.IsDead)
-            {
-                Game.DisplaySubtitle("The victim is dead. Neutralize the suspect.", 5000);
-            }
+
+            
         }
 
         public override void End()
         {
             base.End();
-            if (blip_suspect.Exists()) blip_suspect.Delete();
-            if (blip_victim.Exists()) blip_victim.Delete();
-            if (suspect.Exists())
-            {
-                suspect.Dismiss();
-            }
+
         }
     }
 }
